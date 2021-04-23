@@ -1,17 +1,18 @@
-const { mysqldb } = require("../connection");
+const { mysqldb } = require("./../connection");
 const {
   createAccessToken,
   createEmailVerifiedToken,
   createTokenRefresh,
-} = require("../helpers/createToken");
+} = require("./../helpers/createToken");
 const fs = require("fs");
-const hashpass = require("../helpers/hashingpass");
+const hashpass = require("./../helpers/hashingpass");
 const { v4: uuidv4 } = require("uuid");
 const { promisify } = require("util");
 const path = require("path");
 const handlebars = require("handlebars");
-const transporter = require("../helpers/transporter");
+const transporter = require("./../helpers/transporter");
 const dba = promisify(mysqldb.query).bind(mysqldb);
+const jwt = require("jsonwebtoken");
 
 module.exports = {
   Register: async (req, res) => {
@@ -55,21 +56,28 @@ module.exports = {
         // buat token email,access,refresh
         const tokenEmail = createEmailVerifiedToken(dataToken);
         const tokenAccess = createAccessToken(dataToken);
+        // const decoded = jwt.verify(tokenAccess, "saitama");
+        // console.log(decoded);
+        // console.log(new Date());
+        // console.log(new Date(decoded.exp * 1000).getHours());
+        // console.log(new Date(decoded.iat * 1000));
+        // console.log(decoded.iat);
+        // console.log(decoded.exp - decoded.iat);
         const tokenRefresh = createTokenRefresh(dataToken);
         const link = "http://localhost:3000/verified/" + tokenEmail;
         const htmltoemail = template({ username: username, link: link });
         // kirim email
         await transporter.sendMail({
-          from: "ramadhan berkah <dedimashuri1996@gmail.com>",
+          from: "MOTOLI <dedimashuri1996@gmail.com>",
           to: email,
           subject: "Hai konfirm cargo",
           html: htmltoemail,
         });
         // buat res responsheader
-        res.set("tokenAccess", tokenAccess);
-        res.set("tokenRefresh", tokenRefresh);
+        res.set("x-token-access", tokenAccess);
+        res.set("x-token-refresh", tokenRefresh);
         // kriim data
-        return res.status(200).send(datauser[0]);
+        return res.status(200).send({ ...datauser[0], cart: [] });
       }
     } catch (error) {
       console.log(error);
@@ -77,10 +85,47 @@ module.exports = {
     }
   },
   keeplogin: async (req, res) => {
-    const { idusers } = req.user;
-    let sql = `select idusers,username,email,isverified,role from users where idusers = ? `;
-    // get data user lagi
-    const datauser = await dba(sql, [idusers]);
-    return res.status(200).send(datauser[0]);
+    try {
+      const { idusers } = req.user;
+      let sql = `select idusers,username,email,isverified,role from users where idusers = ? `;
+      // get data user lagi
+      const datauser = await dba(sql, [idusers]);
+      return res.status(200).send(datauser[0]);
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "server error" });
+    }
+  },
+  login: async (req, res) => {
+    try {
+      const { emailorusername, password } = req.body;
+      if (!emailorusername || !password) {
+        return res.status(400).send({ message: "bad request" });
+      }
+      // mysqldb.query(sql,(err,result))
+      let sql = `select idusers,username,email,isverified,role from users where (username= ? or email = ?) and password = ? `;
+      const datauser = await dba(sql, [
+        emailorusername,
+        emailorusername,
+        hashpass(password),
+      ]);
+      if (datauser.length) {
+        let dataToken = {
+          idusers: datauser[0].idusers,
+          username: datauser[0].username,
+        };
+        const tokenAccess = createAccessToken(dataToken);
+        const tokenRefresh = createTokenRefresh(dataToken);
+        res.set("x-token-access", tokenAccess);
+        res.set("x-token-refresh", tokenRefresh);
+        // kirim data
+        return res.status(200).send(datauser[0]);
+      } else {
+        return res.status(500).send({ message: "username tidak terdaftar" });
+      }
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "server error" });
+    }
   },
 };

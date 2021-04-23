@@ -9,12 +9,12 @@ module.exports = {
   createEmailVerifiedToken: (data) => {
     const key = "king";
     const token = jwt.sign(data, key, { expiresIn: "1m" });
-    
+    return token;
   },
   createTokenRefresh: (data) => { // untuk ambil token access yang baru setelah kadaluarsa
     
     const key = "gogo"
-    const toket = jwt.sign(data, key)
+    const token = jwt.sign(data, key)
     return token;
   }
   
