@@ -1,4 +1,5 @@
 module.exports = {
-    AuthRoutes: require("./AuthRoutes"),
-    ProductRoutes: require("./ProductRoutes"),
-  };
+  AuthRoutes: require("./AuthRoutes"),
+  ProductRoutes: require("./ProductRoutes"),
+  TransactionsRoutes: require("./transactionsRoutes"),
+};
