@@ -11,11 +11,14 @@ module.exports = {
     const token = jwt.sign(data, key, { expiresIn: "1m" });
     return token;
   },
-  createTokenRefresh: (data) => { // untuk ambil token access yang baru setelah kadaluarsa
-    
-    const key = "gogo"
-    const token = jwt.sign(data, key)
+  createTokenRefresh: (data) => {
+    const key = "puripuri";
+    const token = jwt.sign(data, key);
     return token;
-  }
-  
+  },
+  createTokenForget: (data) => {
+    const key = "mumen";
+    const token = jwt.sign(data, key, { expiresIn: "10m" });
+    return token;
+  },
 };
